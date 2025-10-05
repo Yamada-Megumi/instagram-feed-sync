@@ -1,0 +1,22 @@
+/* Instagram Feed Sync v2.1.1 - 最終版 */
+.instagram-feed-wrapper { width: 100%; max-width: 1200px; margin: 0 auto; }
+.instagram-feed-container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 20px 0; }
+.instagram-feed-grid { display: grid; gap: 15px; grid-template-columns: repeat(3, 1fr); }
+.instagram-feed-container[data-columns="1"] .instagram-feed-grid { grid-template-columns: 1fr; }
+.instagram-feed-container[data-columns="2"] .instagram-feed-grid { grid-template-columns: repeat(2, 1fr); }
+.instagram-feed-container[data-columns="4"] .instagram-feed-grid { grid-template-columns: repeat(4, 1fr); }
+.instagram-feed-container[data-columns="5"] .instagram-feed-grid { grid-template-columns: repeat(5, 1fr); }
+.instagram-feed-container[data-columns="6"] .instagram-feed-grid { grid-template-columns: repeat(6, 1fr); }
+.instagram-feed-item { position: relative; aspect-ratio: 1/1; overflow: hidden; border-radius: 8px; background-color: #f0f0f0; }
+.instagram-feed-item a { display: block; width: 100%; height: 100%; position: relative; text-decoration: none; }
+.instagram-feed-item img { width: 100%; height: 100%; object-fit: cover; }
+.instagram-icon-overlay { position: absolute; top: 8px; right: 8px; z-index: 10; pointer-events: none; background: rgba(0,0,0,0.6); border-radius: 4px; padding: 4px; display: flex; align-items: center; justify-content: center; }
+.instagram-icon-overlay svg { display: block; }
+@media (max-width: 768px) {
+    .instagram-feed-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px; }
+}
+@media (max-width: 480px) {
+    .instagram-feed-grid { grid-template-columns: 1fr !important; gap: 8px; }
+}
+.instagram-feed-loading { text-align: center; padding: 40px; color: #666; }
+.instagram-feed-error { background-color: #fee; border: 1px solid #fcc; border-radius: 4px; padding: 15px; color: #c00; margin: 20px 0; }
