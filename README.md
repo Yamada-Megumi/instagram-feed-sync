@@ -72,7 +72,7 @@
 
 1. https://developers.facebook.com/ にアクセス
 2. アプリを作成
-3. Instagram Graph API を追加
+3. instagram　テストユーザ追加　ユーザーInstaページで承認が必要
 4. アクセストークンを取得
 
 ### 2. プラグイン設定
