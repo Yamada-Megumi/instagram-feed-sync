@@ -210,9 +210,14 @@ class Instagram_Settings {
         } elseif (isset($_POST['update_account'])) {
             check_admin_referer('instagram_update_account');
             $this->update_account();
-        } elseif (isset($_GET['action'], $_GET['account_key'], $_GET['_wpnonce']) && $_GET['action'] === 'delete') {
-            if (wp_verify_nonce($_GET['_wpnonce'], 'instagram_delete_account_' . $_GET['account_key'])) {
-                $this->delete_account(sanitize_key($_GET['account_key']));
+        } elseif (isset($_GET['action'], $_GET['account_key'], $_GET['_wpnonce'])) {
+            $action = $_GET['action'];
+            $account_key = sanitize_key($_GET['account_key']);
+
+            if ($action === 'delete' && wp_verify_nonce($_GET['_wpnonce'], 'instagram_delete_account_' . $account_key)) {
+                $this->delete_account($account_key);
+            } elseif ($action === 'refresh' && wp_verify_nonce($_GET['_wpnonce'], 'instagram_refresh_cache_' . $account_key)) {
+                $this->refresh_account_cache($account_key);
             }
         }
     }
@@ -249,7 +254,7 @@ class Instagram_Settings {
                 </tr>
             </table>
             <?php submit_button('アカウント追加', 'primary', 'add_account'); ?>
-            <em>※ 不明な点はREADME.mdを参照してください。 リンク: <a href="https://github.com/Yamada-Megumi/instagram-feed-sync/blob/main/README.md" target="_blank">README.md</a></em>
+            <p><small>不明な点はREADME.mdを参照してください。 リンク: <a href="https://github.com/Yamada-Megumi/instagram-feed-sync/blob/main/README.md" target="_blank">README.md</a></small></p>
         </form>
         <?php
     }
@@ -323,6 +328,7 @@ class Instagram_Settings {
             <tbody>
                 <?php foreach ($accounts as $key => $account): 
                     $delete_url = wp_nonce_url(admin_url('admin.php?page=instagram-feed-sync&action=delete&account_key=' . $key), 'instagram_delete_account_' . $key);
+                    $refresh_url = wp_nonce_url(admin_url('admin.php?page=instagram-feed-sync&action=refresh&account_key=' . $key), 'instagram_refresh_cache_' . $key);
                 ?>
                 <tr>
                     <td><strong><?php echo esc_html($account['username']); ?></strong></td>
@@ -330,6 +336,7 @@ class Instagram_Settings {
                     <td><?php echo !empty($account['instagram_url']) ? '<a href="' . esc_url($account['instagram_url']) . '" target="_blank">表示</a>' : '-'; ?></td>
                     <td><code>[instagram_feed username="<?php echo esc_attr($account['username']); ?>"]</code></td>
                     <td>
+                        <a href="<?php echo esc_url($refresh_url); ?>" class="button button-primary">手動更新</a>
                         <a href="?page=instagram-feed-sync&action=edit&account_key=<?php echo esc_attr($key); ?>" class="button button-small">編集</a>
                         <a href="<?php echo esc_url($delete_url); ?>" class="button button-small" style="color:#b32d2e;" onclick="return confirm('本当に削除しますか？');">削除</a>
                     </td>
@@ -420,6 +427,27 @@ class Instagram_Settings {
             add_settings_error('instagram_feed_sync_notices', 'account_deleted', 'アカウントを削除しました。', 'success');
         } else {
             add_settings_error('instagram_feed_sync_notices', 'delete_failed', 'アカウントが見つかりませんでした。', 'error');
+        }
+        wp_redirect(admin_url('admin.php?page=instagram-feed-sync'));
+        exit;
+    }
+
+    private function refresh_account_cache(string $key): void {
+        $accounts = get_option('instagram_feed_sync_accounts', []);
+        if (isset($accounts[$key])) {
+            $decrypted_token = Instagram_Encryption::decrypt($accounts[$key]['access_token']);
+            $token_hash = md5($decrypted_token);
+
+            delete_transient('instagram_profile_' . $token_hash);
+
+            // Attempt to clear media caches for common limit values
+            for ($i = 1; $i <= 24; $i++) {
+                delete_transient('instagram_media_' . $token_hash . '_' . $i);
+            }
+
+            add_settings_error('instagram_feed_sync_notices', 'cache_cleared', 'アカウント「' . esc_html($accounts[$key]['username']) . '」のキャッシュをクリアしました。', 'success');
+        } else {
+            add_settings_error('instagram_feed_sync_notices', 'cache_clear_failed', 'キャッシュのクリアに失敗しました。アカウントが見つかりません。', 'error');
         }
         wp_redirect(admin_url('admin.php?page=instagram-feed-sync'));
         exit;

@@ -24,8 +24,8 @@
 
 1. ZIP ファイルを解凍
 2. `instagram-feed-sync` フォルダを `wp-content/plugins/` にアップロード
-3. WordPress 管理画面でプラグインを有効化
-4. 設定 → Instagram Feed Sync で設定
+4. WordPress 管理画面でプラグインを有効化
+5. 管理画面のサイドバーにある「Instagram Feed」メニューから設定
 
 ## 📝 使い方
 
@@ -79,7 +79,7 @@
 
 - Meta for Developers に登録後の手順です。
 
-1. WordPress 管理画面 → 設定 → Instagram Feed Sync
+1. WordPress 管理画面 → Instagram Feed
 2. API 種別を選択
 3. アクセストークンを入力
 4. ユーザー名を入力
