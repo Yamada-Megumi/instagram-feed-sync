@@ -198,7 +198,6 @@ class Instagram_Settings {
                 <li><strong>show_profile</strong>: プロフィール表示（true/false）</li>
                 <li><strong>username</strong>: 表示アカウント指定</li>
             </ul>
-            <small>不明な点はREADME.mdを参照してください。 リンク: <a href="https://github.com/Yamada-Megumi/instagram-feed-sync/blob/main/README.md" target="_blank">README.md</a></small>
         </div>
         <?php
         echo '</div>';
@@ -250,7 +249,7 @@ class Instagram_Settings {
                 </tr>
             </table>
             <?php submit_button('アカウント追加', 'primary', 'add_account'); ?>
-            <p><small>不明な点はREADME.mdを参照してください。 リンク: <a href="https://github.com/Yamada-Megumi/instagram-feed-sync/blob/main/README.md" target="_blank">README.md</a></small></p>
+            <em>※ 不明な点はREADME.mdを参照してください。 リンク: <a href="https://github.com/Yamada-Megumi/instagram-feed-sync/blob/main/README.md" target="_blank">README.md</a></em>
         </form>
         <?php
     }
