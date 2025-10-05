@@ -34,27 +34,7 @@ class Instagram_Encryption {
     }
 }
 
-class WP_Admin_Notices {
-    private static $notices = [];
 
-    public static function add_notice(string $message, string $type = 'info', bool $dismissible = true) {
-        self::$notices[] = [
-            'message' => $message,
-            'type' => $type,
-            'dismissible' => $dismissible
-        ];
-    }
-
-    public static function display_notices() {
-        foreach (self::$notices as $notice) {
-            $class = 'notice notice-' . $notice['type'];
-            if ($notice['dismissible']) {
-                $class .= ' is-dismissible';
-            }
-            printf('<div class="%1$s"><p>%2$s</p></div>', esc_attr($class), wp_kses_post($notice['message']));
-        }
-    }
-}
 
 class Instagram_API_Handler {
     private $api_type;
@@ -165,13 +145,19 @@ class Instagram_Token_Manager {
 class Instagram_Settings {
     public function __construct() {
         add_action('admin_menu', [$this, 'add_menu']);
-        add_action('admin_init', [$this, 'handle_form_actions']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
-        add_action('admin_notices', ['WP_Admin_Notices', 'display_notices']);
     }
 
     public function add_menu(): void {
-        add_menu_page('Instagram Feed', 'Instagram Feed', 'manage_options', 'instagram-feed-sync', [$this, 'render_page'], 'dashicons-instagram');
+        add_menu_page(
+            'Instagram Feed Sync',
+            'Instagram Feed',
+            'manage_options',
+            'instagram-feed-sync',
+            [$this, 'render_page'],
+            'dashicons-instagram',
+            16
+        );
     }
 
     public function enqueue_assets($hook): void {
@@ -179,24 +165,10 @@ class Instagram_Settings {
         wp_enqueue_style('instagram-admin', INSTAGRAM_FEED_SYNC_URL . 'admin/css/admin.css', [], INSTAGRAM_FEED_SYNC_VERSION);
     }
 
-    public function handle_form_actions(): void {
-        if (!current_user_can('manage_options')) return;
-
-        if (isset($_POST['add_account'])) {
-            check_admin_referer('instagram_add_account');
-            $this->add_account();
-        } elseif (isset($_POST['update_account'])) {
-            check_admin_referer('instagram_update_account');
-            $this->update_account();
-        } elseif (isset($_GET['action'], $_GET['account_key'], $_GET['_wpnonce']) && $_GET['action'] === 'delete') {
-            if (wp_verify_nonce($_GET['_wpnonce'], 'instagram_delete_account_' . $_GET['account_key'])) {
-                $this->delete_account(sanitize_key($_GET['account_key']));
-            }
-        }
-    }
-
     public function render_page(): void {
         if (!current_user_can('manage_options')) wp_die('権限がありません');
+
+        $this->handle_form_actions();
 
         $action = $_GET['action'] ?? 'list';
         $account_key = isset($_GET['account_key']) ? sanitize_key($_GET['account_key']) : null;
@@ -214,8 +186,36 @@ class Instagram_Settings {
             $this->render_accounts_list($accounts);
         }
         
-        $this->render_shortcode_guide();
+        ?>
+        <div class="card" style="max-width:800px;margin-top:20px;">
+            <h3>ショートコード使用方法</h3>
+            <p><code>[instagram_feed limit="12" columns="3"]</code></p>
+            <p><code>[instagram_feed show_profile="true" limit="9"]</code></p>
+            <h4>パラメータ</h4>
+            <ul>
+                <li><strong>limit</strong>: 表示件数（デフォルト: 12）</li>
+                <li><strong>columns</strong>: カラム数 1-6（デフォルト: 3）</li>
+                <li><strong>show_profile</strong>: プロフィール表示（true/false）</li>
+                <li><strong>username</strong>: 表示アカウント指定</li>
+            </ul>
+            <small>不明な点はREADME.mdを参照してください。 リンク: <a href="https://github.com/Yamada-Megumi/instagram-feed-sync/blob/main/README.md" target="_blank">README.md</a></small>
+        </div>
+        <?php
         echo '</div>';
+    }
+
+    private function handle_form_actions(): void {
+        if (isset($_POST['add_account'])) {
+            check_admin_referer('instagram_add_account');
+            $this->add_account();
+        } elseif (isset($_POST['update_account'])) {
+            check_admin_referer('instagram_update_account');
+            $this->update_account();
+        } elseif (isset($_GET['action'], $_GET['account_key'], $_GET['_wpnonce']) && $_GET['action'] === 'delete') {
+            if (wp_verify_nonce($_GET['_wpnonce'], 'instagram_delete_account_' . $_GET['account_key'])) {
+                $this->delete_account(sanitize_key($_GET['account_key']));
+            }
+        }
     }
 
     private function render_add_form(): void {
@@ -250,11 +250,13 @@ class Instagram_Settings {
                 </tr>
             </table>
             <?php submit_button('アカウント追加', 'primary', 'add_account'); ?>
+            <p><small>不明な点はREADME.mdを参照してください。 リンク: <a href="https://github.com/Yamada-Megumi/instagram-feed-sync/blob/main/README.md" target="_blank">README.md</a></small></p>
         </form>
         <?php
     }
 
     private function render_edit_form(string $key, array $account): void {
+        $decrypted_token = Instagram_Encryption::decrypt($account['access_token']);
         ?>
         <h2>アカウント編集: <?php echo esc_html($account['username']); ?></h2>
         <form method="post" action="<?php echo admin_url('admin.php?page=instagram-feed-sync'); ?>">
@@ -273,6 +275,13 @@ class Instagram_Settings {
                     </select></td>
                 </tr>
                 <tr>
+                    <th>現在のアクセストークン</th>
+                    <td>
+                        <input type="password" id="existing_token" class="regular-text" value="<?php echo esc_attr($decrypted_token); ?>" readonly style="background:#eee;">
+                        <button type="button" class="button" id="toggle_token_visibility">表示</button>
+                    </td>
+                </tr>
+                <tr>
                     <th>新しいアクセストークン</th>
                     <td><textarea name="access_token" rows="3" class="large-text"></textarea>
                     <p class="description">トークンを更新する場合のみ入力してください。空のままなら既存のトークンが維持されます。</p>
@@ -287,7 +296,20 @@ class Instagram_Settings {
             </table>
             <?php submit_button('更新', 'primary', 'update_account'); ?>
             <a href="?page=instagram-feed-sync" class="button">キャンセル</a>
+            <p><small>不明な点はREADME.mdを参照してください。 リンク: <a href="https://github.com/Yamada-Megumi/instagram-feed-sync/blob/main/README.md" target="_blank">README.md</a></small></p>
         </form>
+        <script>
+            document.getElementById('toggle_token_visibility').addEventListener('click', function() {
+                var tokenInput = document.getElementById('existing_token');
+                if (tokenInput.type === 'password') {
+                    tokenInput.type = 'text';
+                    this.textContent = '隠す';
+                } else {
+                    tokenInput.type = 'password';
+                    this.textContent = '表示';
+                }
+            });
+        </script>
         <?php
     }
 
@@ -317,10 +339,6 @@ class Instagram_Settings {
             </tbody>
         </table>
         <?php
-    }
-    
-    private function render_shortcode_guide(): void {
-         // ... (same as before)
     }
 
     private function add_account(): void {
@@ -365,7 +383,6 @@ class Instagram_Settings {
 
         if ($new_key !== $account_key && isset($accounts[$new_key])) {
             add_settings_error('instagram_feed_sync_notices', 'duplicate_user_update', 'そのユーザー名は既に存在します。別の名前を選択してください。', 'error');
-            // To show the error on the edit page, we redirect back there.
             wp_redirect(admin_url('admin.php?page=instagram-feed-sync&action=edit&account_key=' . $account_key));
             exit;
         }
@@ -400,8 +417,6 @@ class Instagram_Settings {
             update_option('instagram_feed_sync_accounts', $accounts);
             
             delete_transient('instagram_profile_' . md5($decrypted_token));
-            // Also need to clear all media caches with different limits
-            // This is a bit tricky, better to just let them expire.
 
             add_settings_error('instagram_feed_sync_notices', 'account_deleted', 'アカウントを削除しました。', 'success');
         } else {
