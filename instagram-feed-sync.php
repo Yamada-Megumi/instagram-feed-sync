@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Instagram Feed Sync
  * Description: InstagramグラフAPIと基本表示APIの両方に対応（シンプル版）。設定画面から複数アカウント登録可能。ショートコードで簡単にInstagramフィードを表示。アクセストークンの自動更新機能付き。
- * Version: 2.1.1
+ * Version: 2.1.13
  * Author: m yamada with AI
  * Requires at least: 6.0
  * Requires PHP: 8.0
@@ -10,7 +10,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('INSTAGRAM_FEED_SYNC_VERSION', '2.1.1');
+define('INSTAGRAM_FEED_SYNC_VERSION', '2.1.13');
 define('INSTAGRAM_FEED_SYNC_PATH', plugin_dir_path(__FILE__));
 define('INSTAGRAM_FEED_SYNC_URL', plugin_dir_url(__FILE__));
 
@@ -37,11 +37,9 @@ class Instagram_Encryption {
 
 
 class Instagram_API_Handler {
-    private $api_type;
     private $access_token;
     
-    public function __construct(string $api_type, string $access_token) {
-        $this->api_type = $api_type;
+    public function __construct(string $access_token) {
         $this->access_token = Instagram_Encryption::decrypt($access_token);
     }
     
@@ -144,8 +142,15 @@ class Instagram_Token_Manager {
 
 class Instagram_Settings {
     public function __construct() {
+        add_action('admin_init', [$this, 'process_form_actions']);
         add_action('admin_menu', [$this, 'add_menu']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
+    }
+
+    public function process_form_actions(): void {
+        if (isset($_GET['page']) && $_GET['page'] === 'instagram-feed-sync') {
+            $this->handle_form_actions();
+        }
     }
 
     public function add_menu(): void {
@@ -167,8 +172,6 @@ class Instagram_Settings {
 
     public function render_page(): void {
         if (!current_user_can('manage_options')) wp_die('権限がありません');
-
-        $this->handle_form_actions();
 
         $action = $_GET['action'] ?? 'list';
         $account_key = isset($_GET['account_key']) ? sanitize_key($_GET['account_key']) : null;
@@ -234,13 +237,7 @@ class Instagram_Settings {
                         <p class="description">アカウントの識別子として使われます（例: my_business_account）。</p>
                     </td>
                 </tr>
-                <tr>
-                    <th>API種別</th>
-                    <td><select name="api_type" required>
-                        <option value="graph">InstagramグラフAPI（推奨）</option>
-                        <option value="basic">Instagram基本表示API</option>
-                    </select></td>
-                </tr>
+                
                 <tr>
                     <th>アクセストークン</th>
                     <td><textarea name="access_token" rows="3" class="large-text" required></textarea></td>
@@ -250,6 +247,26 @@ class Instagram_Settings {
                     <td>
                         <input type="url" name="instagram_url" class="regular-text" placeholder="https://instagram.com/username">
                         <p class="description">プロフィールページのURL（オプション）</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th>フォローボタンの背景</th>
+                    <td>
+                        <input type="text" name="follow_button_bg" class="regular-text" placeholder="#3897f0 or linear-gradient(#e66465, #9198e5)">
+                        <p class="description">CSSの色コードまたはグラデーションを指定します。</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th>フォローボタン文字色</th>
+                    <td>
+                        <input type="text" name="follow_button_text_color" class="regular-text" placeholder="#ffffff">
+                        <p class="description">CSSの色コードを指定します。</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th>フォローボタンのテキスト</th>
+                    <td>
+                        <input type="text" name="follow_button_text" class="regular-text" placeholder="Follow">
                     </td>
                 </tr>
             </table>
@@ -272,29 +289,35 @@ class Instagram_Settings {
                     <td><input type="text" name="username" value="<?php echo esc_attr($account['username']); ?>" class="regular-text" required></td>
                 </tr>
                 <tr>
-                    <th>API種別</th>
-                    <td><select name="api_type" required>
-                        <option value="graph" <?php selected($account['api_type'], 'graph'); ?>>InstagramグラフAPI（推奨）</option>
-                        <option value="basic" <?php selected($account['api_type'], 'basic'); ?>>Instagram基本表示API</option>
-                    </select></td>
-                </tr>
-                <tr>
-                    <th>現在のアクセストークン</th>
-                    <td>
-                        <input type="password" id="existing_token" class="regular-text" value="<?php echo esc_attr($decrypted_token); ?>" readonly style="background:#eee;">
-                        <button type="button" class="button" id="toggle_token_visibility">表示</button>
-                    </td>
-                </tr>
-                <tr>
                     <th>新しいアクセストークン</th>
                     <td><textarea name="access_token" rows="3" class="large-text"></textarea>
-                    <p class="description">トークンを更新する場合のみ入力してください。空のままなら既存のトークンが維持されます。</p>
+                    <p class="description">トークンを更新する場合のみ入力してください。空のままなら既存のトークンが維持されます。<br>現在のアクセストークンは表示されません。</p>
                     </td>
                 </tr>
                 <tr>
                     <th>Instagram URL</th>
                     <td>
                         <input type="url" name="instagram_url" value="<?php echo esc_attr($account['instagram_url']); ?>" class="regular-text" placeholder="https://instagram.com/username">
+                    </td>
+                </tr>
+                <tr>
+                    <th>フォローボタンの背景</th>
+                    <td>
+                        <input type="text" name="follow_button_bg" value="<?php echo esc_attr($account['follow_button_bg'] ?? '#3897f0'); ?>" class="regular-text" placeholder="#3897f0 or linear-gradient(#e66465, #9198e5)">
+                        <p class="description">CSSの色コードまたはグラデーションを指定します。</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th>フォローボタン文字色</th>
+                    <td>
+                        <input type="text" name="follow_button_text_color" value="<?php echo esc_attr($account['follow_button_text_color'] ?? '#ffffff'); ?>" class="regular-text" placeholder="#ffffff">
+                        <p class="description">CSSの色コードを指定します。</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th>フォローボタンのテキスト</th>
+                    <td>
+                        <input type="text" name="follow_button_text" value="<?php echo esc_attr($account['follow_button_text'] ?? 'Follow'); ?>" class="regular-text" placeholder="Follow">
                     </td>
                 </tr>
             </table>
@@ -323,7 +346,7 @@ class Instagram_Settings {
         <h2>登録済みアカウント</h2>
         <table class="widefat striped">
             <thead>
-                <tr><th>ユーザー名</th><th>API</th><th>URL</th><th>ショートコード</th><th>操作</th></tr>
+                <tr><th>ユーザー名</th><th>URL</th><th>ショートコード</th><th>操作</th></tr>
             </thead>
             <tbody>
                 <?php foreach ($accounts as $key => $account): 
@@ -332,7 +355,6 @@ class Instagram_Settings {
                 ?>
                 <tr>
                     <td><strong><?php echo esc_html($account['username']); ?></strong></td>
-                    <td><?php echo esc_html(strtoupper($account['api_type'])); ?></td>
                     <td><?php echo !empty($account['instagram_url']) ? '<a href="' . esc_url($account['instagram_url']) . '" target="_blank">表示</a>' : '-'; ?></td>
                     <td><code>[instagram_feed username="<?php echo esc_attr($account['username']); ?>"]</code></td>
                     <td>
@@ -364,9 +386,11 @@ class Instagram_Settings {
 
         $accounts[$account_key] = [
             'username'      => $username,
-            'api_type'      => sanitize_text_field($_POST['api_type']),
             'access_token'  => Instagram_Encryption::encrypt(sanitize_textarea_field($_POST['access_token'])),
             'instagram_url' => esc_url_raw($_POST['instagram_url'] ?? ''),
+            'follow_button_bg' => sanitize_text_field($_POST['follow_button_bg'] ?? '#3897f0'),
+            'follow_button_text_color' => sanitize_text_field($_POST['follow_button_text_color'] ?? '#ffffff'),
+            'follow_button_text' => sanitize_text_field($_POST['follow_button_text'] ?? 'Follow'),
             'added_at'      => current_time('mysql')
         ];
         
@@ -395,8 +419,10 @@ class Instagram_Settings {
 
         $account_data = [
             'username'      => $username,
-            'api_type'      => sanitize_text_field($_POST['api_type']),
             'instagram_url' => esc_url_raw($_POST['instagram_url'] ?? ''),
+            'follow_button_bg' => sanitize_text_field($_POST['follow_button_bg'] ?? '#3897f0'),
+            'follow_button_text_color' => sanitize_text_field($_POST['follow_button_text_color'] ?? '#ffffff'),
+            'follow_button_text' => sanitize_text_field($_POST['follow_button_text'] ?? 'Follow'),
         ];
 
         if (!empty($_POST['access_token'])) {
@@ -480,7 +506,7 @@ class Instagram_Shortcode {
         
         if (!$account) return '<p>アカウントが見つかりません</p>';
         
-        $handler = new Instagram_API_Handler($account['api_type'], $account['access_token']);
+        $handler = new Instagram_API_Handler($account['access_token']);
         $media = $handler->get_media(absint($atts['limit']));
         if (is_wp_error($media) || empty($media)) return '<p>投稿を取得できません</p>';
         
@@ -499,8 +525,20 @@ class Instagram_Shortcode {
                 <?php if (!empty($profile['biography'])): ?>
                     <p><?php echo wp_kses_post(nl2br($profile['biography'])); ?></p>
                 <?php endif; ?>
-                <?php if (!empty($account['instagram_url'])): ?>
-                    <p><a href="<?php echo esc_url($account['instagram_url']); ?>" target="_blank" rel="noopener">Instagram</a></p>
+                <?php if (!empty($account['instagram_url'])): 
+                    $bg = esc_attr($account['follow_button_bg'] ?? '#3897f0');
+                    $text_color = esc_attr($account['follow_button_text_color'] ?? '#ffffff');
+
+                    $style = "color: {$text_color}; background: {$bg};";
+                ?>
+                    <p class="instagram-feed-follow_btn"><a href="<?php echo esc_url($account['instagram_url']); ?>" target="_blank" rel="noopener" class="instagram-follow-button instagram-follow-button-custom" style="<?php echo $style; ?>">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 8px;">
+                            <rect x="2" y="2" width="20" height="20" rx="5" stroke="<?php echo $text_color; ?>" stroke-width="1.5" fill="none"/>
+                            <circle cx="12" cy="12" r="4.5" stroke="<?php echo $text_color; ?>" stroke-width="1.5" fill="none"/>
+                            <circle cx="17.5" cy="6.5" r="1" fill="<?php echo $text_color; ?>"/>
+                        </svg>
+                        <?php echo esc_html($account['follow_button_text'] ?? 'Follow'); ?>
+                    </a></p>
                 <?php endif; ?>
             </div>
             <?php endif; ?>
@@ -576,7 +614,7 @@ class Instagram_Feed_Sync {
     
     public function enqueue_assets() {
         wp_enqueue_style('instagram-feed', INSTAGRAM_FEED_SYNC_URL . 'public/css/style.css', [], INSTAGRAM_FEED_SYNC_VERSION);
-        wp_enqueue_script('instagram-feed', INSTAGRAM_FEED_SYNC_URL . 'public/js/script.js', ['jquery'], INSTAGRAM_FEED_SYNC_VERSION, true);
+        wp_enqueue_script('instagram-feed', INSTAGRAM_FEED_SYNC_URL . 'public/js/script.js', [], INSTAGRAM_FEED_SYNC_VERSION, true);
     }
 }
 

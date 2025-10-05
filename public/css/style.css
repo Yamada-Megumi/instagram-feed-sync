@@ -1,4 +1,4 @@
-/* Instagram Feed Sync v2.1.1 - 最終版 */
+/* Instagram Feed Sync v2.1.13 - 最終版 */
 .instagram-feed-wrapper { width: 100%; max-width: 1200px; margin: 0 auto; }
 .instagram-feed-container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 20px 0; }
 .instagram-feed-grid { display: grid; gap: 15px; grid-template-columns: repeat(3, 1fr); }
@@ -20,3 +20,16 @@
 }
 .instagram-feed-loading { text-align: center; padding: 40px; color: #666; }
 .instagram-feed-error { background-color: #fee; border: 1px solid #fcc; border-radius: 4px; padding: 15px; color: #c00; margin: 20px 0; }
+
+.instagram-follow-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background-color: #3897f0;
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+

@@ -1,12 +1,15 @@
-(function($) {
-    'use strict';
-    $(document).ready(function() {
-        $('.instagram-feed-container img').on('error', function() {
-            $(this).closest('.instagram-feed-item').hide();
-        });
-        
-        $('.instagram-feed-container img').on('load', function() {
-            $(this).closest('.instagram-feed-item').addClass('loaded');
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle image errors
+    document.querySelectorAll('.instagram-feed-container img').forEach(function(img) {
+        img.addEventListener('error', function() {
+            this.closest('.instagram-feed-item').style.display = 'none';
         });
     });
-})(jQuery);
+
+    // Add 'loaded' class on image load
+    document.querySelectorAll('.instagram-feed-container img').forEach(function(img) {
+        img.addEventListener('load', function() {
+            this.closest('.instagram-feed-item').classList.add('loaded');
+        });
+    });
+});
