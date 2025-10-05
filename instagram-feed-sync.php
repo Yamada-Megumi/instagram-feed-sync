@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Instagram Feed Sync
  * Description: InstagramグラフAPIと基本表示APIの両方に対応（シンプル版）。設定画面から複数アカウント登録可能。ショートコードで簡単にInstagramフィードを表示。アクセストークンの自動更新機能付き。
- * Version: 2.2.1
+ * Version: 2.1.1
  * Author: m yamada with AI
  * Requires at least: 6.0
  * Requires PHP: 8.0
@@ -238,6 +238,7 @@ class Instagram_Settings {
                     <li><strong>show_profile</strong>: プロフィール表示（true/false）</li>
                     <li><strong>username</strong>: 表示アカウント指定</li>
                 </ul>
+                <small>不明な点はREADME.mdを参照してください。 リンク: <a href="https://github.com/Yamada-Megumi/instagram-feed-sync/blob/main/README.md" target="_blank">README.md</a></small>
             </div>
         </div>
         <?php

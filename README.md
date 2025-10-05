@@ -147,13 +147,15 @@ instagram-feed-sync/
 
 ## 💬 サポート・問い合わせ
 
-ご質問・不具合報告は [GitHub Issues](https://github.com/your-repo/instagram-feed-sync/issues) または開発者メール（example@example.com）までご連絡ください。
+ご質問・不具合報告は [GitHub Issues](https://github.com/Yamada-Megumi/instagram-feed-sync/issues) または[githubアカウント](https://github.com/Yamada-Megumi)までご連絡ください。
 
 ## 🖼️ スクリーンショット
 
+準備中
+<!-- 
 ![サンプル表示](https://your-demo-site.com/sample.png)
 
-デモサイト: [https://your-demo-site.com/](https://your-demo-site.com/)
+デモサイト: [https://your-demo-site.com/](https://your-demo-site.com/) -->
 
 ## ⚠️ 注意事項
 
